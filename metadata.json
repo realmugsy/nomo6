@@ -1,0 +1,5 @@
+{
+  "name": "Nonogram Puzzle",
+  "description": "A logic puzzle game where you reveal hidden pixel art using numerical hints, featuring infinite procedural level generation.",
+  "requestFramePermissions": []
+}
