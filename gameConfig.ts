@@ -30,3 +30,6 @@ export const DIFFICULTY_CONFIG: Record<DifficultyLevel, DifficultySettings> = {
 };
 
 export const GRID_SIZES = [5, 10, 15, 20, 25];
+
+// Duration of the win animation cycle (one way) in milliseconds
+export const WIN_ANIMATION_DURATION_MS = 1000;

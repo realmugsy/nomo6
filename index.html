@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nonogram Puzzle</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes win-pulse {
+        0% { background-color: #ef4444; border-color: #ef4444; }   /* Red */
+        17% { background-color: #f97316; border-color: #f97316; }  /* Orange */
+        33% { background-color: #eab308; border-color: #eab308; }  /* Yellow */
+        50% { background-color: #22c55e; border-color: #22c55e; }  /* Green */
+        67% { background-color: #06b6d4; border-color: #06b6d4; }  /* Cyan/Light Blue */
+        83% { background-color: #3b82f6; border-color: #3b82f6; }  /* Blue */
+        100% { background-color: #a855f7; border-color: #a855f7; } /* Violet */
+      }
+      .animate-win-pulse {
+        animation-name: win-pulse;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        animation-direction: alternate;
+      }
+    </style>
     <script type="importmap">
 {
   "imports": {

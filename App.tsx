@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { generatePuzzle } from './services/geminiService';
 import { CellState, GameState, PuzzleData, ToolType, DifficultyLevel } from './types';
-import { DIFFICULTY_CONFIG, GRID_SIZES } from './gameConfig';
+import { DIFFICULTY_CONFIG, GRID_SIZES, WIN_ANIMATION_DURATION_MS } from './gameConfig';
 import GridCell from './components/GridCell';
 import Hints from './components/Hints';
 
@@ -29,6 +29,7 @@ const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({ status: 'idle' });
   const [isDebugVisible, setIsDebugVisible] = useState<boolean>(false);
   const [isCheckHintsActive, setIsCheckHintsActive] = useState<boolean>(false);
+  const [winCorner, setWinCorner] = useState<number | null>(null); // 0:TL, 1:TR, 2:BL, 3:BR
   
   // Controls
   const [activeTool, setActiveTool] = useState<ToolType>(ToolType.FILL);
@@ -66,6 +67,7 @@ const App: React.FC = () => {
     setGameState({ status: 'loading' });
     setIsDebugVisible(false); // Reset debug on new game
     setIsCheckHintsActive(false); // Reset hint checking
+    setWinCorner(null); // Reset win animation
     try {
       let finalSeed: number;
       if (seedVal && seedVal.trim().length > 0) {
@@ -114,6 +116,7 @@ const App: React.FC = () => {
       setGameState({ status: 'won' });
       setIsDebugVisible(false); // Ensure debug is off so we see the official win state colors
       setIsCheckHintsActive(true); // Reveal all green hints on win
+      setWinCorner(Math.floor(Math.random() * 4)); // Choose random corner for animation
     }
   }, [playerGrid, puzzle, gameState.status]);
 
@@ -289,7 +292,7 @@ const App: React.FC = () => {
                     disabled={gameState.status === 'loading'}
                     className="bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-lg md:text-xl font-bold py-3 px-12 rounded-xl shadow-lg shadow-indigo-900/50 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                    {gameState.status === 'loading' ? 'Generating...' : 'NEW GAME'}
+                    {gameState.status === 'loading' ? 'Generating...' : 'PLAY'}
                 </button>
                 
                 {/* Seed Display & Debug */}
@@ -404,21 +407,40 @@ const App: React.FC = () => {
                             <Hints line={row} type="row" isComplete={isRowCorrect} />
                         </div>
                         
-                        {playerGrid[r].map((cellState, c) => (
-                            <div key={`cell-${r}-${c}`} className={`aspect-square ${getCellSizeClass(puzzle.size)}`}>
-                                <GridCell
-                                    state={cellState}
-                                    isRevealed={gameState.status === 'won'}
-                                    isDebug={isDebugVisible}
-                                    isSolutionFilled={puzzle.grid[r][c] === 1}
-                                    onMouseDown={(e) => handleMouseDown(e, r, c)}
-                                    onMouseEnter={(e) => handleMouseEnter(e, r, c)}
-                                    isMobile={isMobile}
-                                    borderRightThick={(c + 1) % 5 === 0 && c !== puzzle.size - 1}
-                                    borderBottomThick={(r + 1) % 5 === 0 && r !== puzzle.size - 1}
-                                />
-                            </div>
-                        ))}
+                        {playerGrid[r].map((cellState, c) => {
+                            // Calculate animation delay for wave effect
+                            let delay = "0ms";
+                            if (gameState.status === 'won' && winCorner !== null) {
+                                let dist = 0;
+                                const s = puzzle.size - 1;
+                                switch(winCorner) {
+                                    case 0: dist = r + c; break; // TL
+                                    case 1: dist = r + (s - c); break; // TR
+                                    case 2: dist = (s - r) + c; break; // BL
+                                    case 3: dist = (s - r) + (s - c); break; // BR
+                                }
+                                // 50ms per cell distance step
+                                delay = `${dist * 50}ms`; 
+                            }
+
+                            return (
+                                <div key={`cell-${r}-${c}`} className={`aspect-square ${getCellSizeClass(puzzle.size)}`}>
+                                    <GridCell
+                                        state={cellState}
+                                        isRevealed={gameState.status === 'won'}
+                                        isDebug={isDebugVisible}
+                                        isSolutionFilled={puzzle.grid[r][c] === 1}
+                                        onMouseDown={(e) => handleMouseDown(e, r, c)}
+                                        onMouseEnter={(e) => handleMouseEnter(e, r, c)}
+                                        isMobile={isMobile}
+                                        borderRightThick={(c + 1) % 5 === 0 && c !== puzzle.size - 1}
+                                        borderBottomThick={(r + 1) % 5 === 0 && r !== puzzle.size - 1}
+                                        animationDelay={delay}
+                                        animationDuration={`${WIN_ANIMATION_DURATION_MS}ms`}
+                                    />
+                                </div>
+                            );
+                        })}
                     </React.Fragment>
                 );
                 })}

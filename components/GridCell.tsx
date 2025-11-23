@@ -11,6 +11,8 @@ interface GridCellProps {
   isMobile: boolean;
   borderRightThick?: boolean;
   borderBottomThick?: boolean;
+  animationDelay?: string;
+  animationDuration?: string;
 }
 
 const GridCell: React.FC<GridCellProps> = ({ 
@@ -22,7 +24,9 @@ const GridCell: React.FC<GridCellProps> = ({
   onMouseEnter,
   isMobile,
   borderRightThick,
-  borderBottomThick
+  borderBottomThick,
+  animationDelay,
+  animationDuration
 }) => {
   
   // Base classes
@@ -36,11 +40,24 @@ const GridCell: React.FC<GridCellProps> = ({
   // We show truth if game is won (isRevealed) OR if debug mode is active
   const showSolution = isRevealed || isDebug;
 
+  // Custom style for animation
+  const style: React.CSSProperties = {};
+  if (isRevealed && isSolutionFilled) {
+      if (animationDelay) style.animationDelay = animationDelay;
+      if (animationDuration) style.animationDuration = animationDuration;
+  }
+
   // State styling
   if (showSolution) {
     if (isSolutionFilled) {
        // Correctly filled cell (Solution)
-       classes += " bg-emerald-500 border-emerald-600";
+       if (isRevealed && !isDebug) {
+         // Game Won Animation: Custom rainbow pulse defined in index.html
+         classes += " animate-win-pulse";
+       } else {
+         // Debug view or standard revealed state without animation requirements
+         classes += " bg-emerald-500 border-emerald-600";
+       }
     } else {
        // Empty cell (Solution)
        classes += " bg-slate-800";
@@ -65,6 +82,7 @@ const GridCell: React.FC<GridCellProps> = ({
   return (
     <div 
       className={classes}
+      style={style}
       onMouseDown={onMouseDown}
       onMouseEnter={onMouseEnter}
       onContextMenu={(e) => e.preventDefault()} // Prevent context menu to allow Right Click usage
