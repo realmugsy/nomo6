@@ -161,6 +161,15 @@ const App: React.FC = () => {
     setIsDebugVisible(prev => !prev);
   };
 
+  // Instant Win Cheat
+  const handleCheatWin = () => {
+    if (!puzzle) return;
+    const solvedGrid = puzzle.grid.map(row => 
+        row.map(val => val === 1 ? CellState.FILLED : CellState.EMPTY)
+    );
+    setPlayerGrid(solvedGrid);
+  };
+
   // Generate Hints
   const colHints = puzzle ? Array(puzzle.size).fill(0).map((_, c) => puzzle.grid.map(row => row[c])) : [];
   const rowHints = puzzle ? puzzle.grid : [];
@@ -173,6 +182,20 @@ const App: React.FC = () => {
     if (size <= 20) return "w-4 h-4 md:w-6 md:h-6";
     return "w-3 h-3 md:w-5 md:h-5"; // Expert 25x25
   };
+
+  // Stats calculation
+  const getStats = () => {
+    if (!puzzle) return { count: 0, percent: 0 };
+    let filledCount = 0;
+    puzzle.grid.forEach(row => row.forEach(val => filledCount += val));
+    const total = puzzle.size * puzzle.size;
+    return {
+        count: filledCount,
+        percent: ((filledCount / total) * 100).toFixed(1)
+    };
+  };
+
+  const stats = getStats();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 gap-6 relative overflow-hidden">
@@ -237,17 +260,28 @@ const App: React.FC = () => {
                 
                 {/* Seed Display & Debug */}
                 {puzzle && (gameState.status === 'playing' || gameState.status === 'won') ? (
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center gap-1">
                         <div className="text-xs text-slate-500 font-mono select-all cursor-pointer hover:text-slate-400 transition-colors" title="Current Game Seed">
                             Seed: {puzzle.seed}
                         </div>
+                        <div className="text-[10px] text-slate-600 font-mono">
+                            Filled: {stats.count} ({stats.percent}%)
+                        </div>
                         {gameState.status === 'playing' && (
-                            <button 
-                                onClick={handleDebugToggle}
-                                className="text-[10px] uppercase font-bold tracking-wider text-slate-600 hover:text-rose-400 transition-colors border border-slate-700/50 hover:border-rose-500/50 rounded px-2 py-0.5 bg-slate-900/50"
-                            >
-                                {isDebugVisible ? "[DEBUG] HIDE SOLUTION" : "[DEBUG] SHOW SOLUTION"}
-                            </button>
+                            <div className="flex gap-2 mt-1">
+                                <button 
+                                    onClick={handleDebugToggle}
+                                    className="text-[10px] uppercase font-bold tracking-wider text-slate-600 hover:text-rose-400 transition-colors border border-slate-700/50 hover:border-rose-500/50 rounded px-2 py-0.5 bg-slate-900/50"
+                                >
+                                    {isDebugVisible ? "[DEBUG] HIDE SOLUTION" : "[DEBUG] SHOW SOLUTION"}
+                                </button>
+                                <button 
+                                    onClick={handleCheatWin}
+                                    className="text-[10px] uppercase font-bold tracking-wider text-slate-600 hover:text-emerald-400 transition-colors border border-slate-700/50 hover:border-emerald-500/50 rounded px-2 py-0.5 bg-slate-900/50"
+                                >
+                                    [CHEAT] WIN
+                                </button>
+                            </div>
                         )}
                     </div>
                 ) : <div className="h-4"></div>}

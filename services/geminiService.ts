@@ -1,4 +1,3 @@
-
 import { PuzzleData, DifficultySettings } from "../types";
 
 // Simple seeded random number generator
@@ -38,66 +37,66 @@ export const generatePuzzle = async (
   const grid: number[][] = Array(size).fill(0).map(() => Array(size).fill(0));
   
   // Determine target density for this specific seed within the difficulty range
-  // e.g. if range is 0.90-0.99, pick 0.94
   const targetDensity = difficulty.minDensity + (rng.next() * (difficulty.maxDensity - difficulty.minDensity));
+  const totalCells = size * size;
+  const targetFillCount = Math.floor(totalCells * targetDensity);
 
   // 1. Initial Noise based on target density
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       // Direct probability mapping to density
-      // We removed center bias to strictly adhere to density requests,
-      // as "Very Easy" (99%) needs to be almost entirely filled regardless of position.
       const val = rng.bool(targetDensity) ? 1 : 0;
       grid[y][x] = val;
     }
   }
 
-  // 2. Cellular Automata Smoothing
-  // Only apply light smoothing if density is not extreme.
-  // Extreme densities (very high or very low) should preserve their noise properties 
-  // to maintain the requested difficulty, otherwise CA might aggregate them too much.
-  if (targetDensity > 0.3 && targetDensity < 0.8) {
-    const iterations = 2;
-    for (let i = 0; i < iterations; i++) {
-        const newGrid = grid.map(row => [...row]);
-        for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-            let neighbors = 0;
-            for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                if (dy === 0 && dx === 0) continue;
-                const ny = y + dy;
-                const nx = x + dx;
-                if (ny >= 0 && ny < size && nx >= 0 && nx < size) {
-                if (grid[ny][nx] === 1) neighbors++;
-                }
-            }
-            }
+  // 2. Density Correction (Post-Processing)
+  // Ensure the final grid strictly respects the requested difficulty percentage.
+  let currentFillCount = 0;
+  grid.forEach(row => row.forEach(val => currentFillCount += val));
 
-            // Standard smoothing rules
-            if (grid[y][x] === 1) {
-                newGrid[y][x] = neighbors >= 3 ? 1 : 0;
-            } else {
-                newGrid[y][x] = neighbors >= 4 ? 1 : 0;
-            }
-        }
-        }
-        // Update grid state
-        for(let y=0; y<size; y++) {
-            for(let x=0; x<size; x++) {
-                grid[y][x] = newGrid[y][x];
-            }
-        }
-    }
+  let diff = currentFillCount - targetFillCount;
+
+  // Create a list of all coordinates to pick from randomly
+  const coords = [];
+  for(let y=0; y<size; y++) {
+      for(let x=0; x<size; x++) {
+          coords.push({y, x});
+      }
   }
 
-  // 3. Safety check: Ensure at least one cell is filled (unless density is 0 which shouldn't happen)
-  // and at least one is empty (unless density is 100)
-  let filledCount = 0;
-  grid.forEach(row => row.forEach(cell => filledCount += cell));
+  // Shuffle coordinates (Fisher-Yates) using our RNG
+  for (let i = coords.length - 1; i > 0; i--) {
+      const j = Math.floor(rng.next() * (i + 1));
+      [coords[i], coords[j]] = [coords[j], coords[i]];
+  }
+
+  if (diff > 0) {
+      // Too many filled pixels, remove some (turn 1 to 0)
+      for (const {x, y} of coords) {
+          if (diff === 0) break;
+          if (grid[y][x] === 1) {
+              grid[y][x] = 0;
+              diff--;
+          }
+      }
+  } else if (diff < 0) {
+      // Too few filled pixels, add some (turn 0 to 1)
+      for (const {x, y} of coords) {
+          if (diff === 0) break;
+          if (grid[y][x] === 0) {
+              grid[y][x] = 1;
+              diff++;
+          }
+      }
+  }
+
+  // 3. Safety check: Ensure at least one cell is filled and one is empty 
+  currentFillCount = 0;
+  grid.forEach(row => row.forEach(val => currentFillCount += val));
   
-  if (filledCount === 0) grid[Math.floor(size/2)][Math.floor(size/2)] = 1;
-  if (filledCount === size * size) grid[0][0] = 0;
+  if (currentFillCount === 0 && targetFillCount > 0) grid[Math.floor(size/2)][Math.floor(size/2)] = 1;
+  if (currentFillCount === totalCells && targetFillCount < totalCells) grid[0][0] = 0;
 
   return {
     title: `Pattern #${seed}`,
