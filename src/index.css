@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Prevent text selection during rapid clicking */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}

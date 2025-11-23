@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [playerGrid, setPlayerGrid] = useState<CellState[][]>([]);
   const [gameState, setGameState] = useState<GameState>({ status: 'idle' });
   const [isDebugVisible, setIsDebugVisible] = useState<boolean>(false);
+  const [isCheckHintsActive, setIsCheckHintsActive] = useState<boolean>(false);
   
   // Controls
   const [activeTool, setActiveTool] = useState<ToolType>(ToolType.FILL);
@@ -64,6 +65,7 @@ const App: React.FC = () => {
   const startNewGame = useCallback(async (seedVal?: string) => {
     setGameState({ status: 'loading' });
     setIsDebugVisible(false); // Reset debug on new game
+    setIsCheckHintsActive(false); // Reset hint checking
     try {
       let finalSeed: number;
       if (seedVal && seedVal.trim().length > 0) {
@@ -111,6 +113,7 @@ const App: React.FC = () => {
     if (isWin) {
       setGameState({ status: 'won' });
       setIsDebugVisible(false); // Ensure debug is off so we see the official win state colors
+      setIsCheckHintsActive(true); // Reveal all green hints on win
     }
   }, [playerGrid, puzzle, gameState.status]);
 
@@ -161,6 +164,11 @@ const App: React.FC = () => {
     setIsDebugVisible(prev => !prev);
   };
 
+  // Toggle hints check
+  const handleCheckHintsToggle = () => {
+    setIsCheckHintsActive(prev => !prev);
+  };
+
   // Instant Win Cheat
   const handleCheatWin = () => {
     if (!puzzle) return;
@@ -173,6 +181,31 @@ const App: React.FC = () => {
   // Generate Hints
   const colHints = puzzle ? Array(puzzle.size).fill(0).map((_, c) => puzzle.grid.map(row => row[c])) : [];
   const rowHints = puzzle ? puzzle.grid : [];
+
+  // Logic to check if a specific row or column is correctly solved
+  const isRowComplete = (rowIndex: number): boolean => {
+    if (!puzzle || !playerGrid.length) return false;
+    // Check if player grid row matches puzzle row
+    // Logic: If puzzle is 1, player must be FILLED. If puzzle is 0, player must NOT be FILLED.
+    for (let c = 0; c < puzzle.size; c++) {
+      const target = puzzle.grid[rowIndex][c];
+      const current = playerGrid[rowIndex][c];
+      if (target === 1 && current !== CellState.FILLED) return false;
+      if (target === 0 && current === CellState.FILLED) return false;
+    }
+    return true;
+  };
+
+  const isColComplete = (colIndex: number): boolean => {
+    if (!puzzle || !playerGrid.length) return false;
+    for (let r = 0; r < puzzle.size; r++) {
+      const target = puzzle.grid[r][colIndex];
+      const current = playerGrid[r][colIndex];
+      if (target === 1 && current !== CellState.FILLED) return false;
+      if (target === 0 && current === CellState.FILLED) return false;
+    }
+    return true;
+  };
 
   // Dynamic sizing for cells based on difficulty
   const getCellSizeClass = (size: number) => {
@@ -202,10 +235,11 @@ const App: React.FC = () => {
        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-900 to-slate-900 -z-10"></div>
        
       <header className="text-center space-y-2 mt-4">
-        <h1 className="text-3xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
+        {/* Added pb-2 to prevent bg-clip-text from cutting off descenders */}
+        <h1 className="text-3xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400 pb-2">
           Nonogram Puzzle
         </h1>
-        <div className="h-4"></div>
+        <div className="h-2"></div>
         <p className="text-slate-400 text-sm md:text-base">Reveal the hidden pixel art pattern</p>
       </header>
 
@@ -269,6 +303,12 @@ const App: React.FC = () => {
                         </div>
                         {gameState.status === 'playing' && (
                             <div className="flex gap-2 mt-1">
+                                <button 
+                                    onClick={handleCheckHintsToggle}
+                                    className={`text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700/50 rounded px-2 py-0.5 bg-slate-900/50 ${isCheckHintsActive ? 'text-emerald-400 border-emerald-500/50' : 'text-slate-600 hover:text-emerald-400 hover:border-emerald-500/50'}`}
+                                >
+                                    {isCheckHintsActive ? "[CHECK] HINTS ON" : "[CHECK] HINTS OFF"}
+                                </button>
                                 <button 
                                     onClick={handleDebugToggle}
                                     className="text-[10px] uppercase font-bold tracking-wider text-slate-600 hover:text-rose-400 transition-colors border border-slate-700/50 hover:border-rose-500/50 rounded px-2 py-0.5 bg-slate-900/50"
@@ -335,13 +375,15 @@ const App: React.FC = () => {
                 {/* Column Hints */}
                 {colHints.map((col, i) => {
                 const isThickRight = (i + 1) % 5 === 0 && i !== puzzle.size - 1;
+                const isColCorrect = isCheckHintsActive && isColComplete(i);
+                
                 let classes = "bg-slate-900/50 border-b border-slate-800 pb-1 flex flex-col justify-end";
                 if (isThickRight) classes += " border-r-2 border-r-slate-400";
                 else classes += " border-r border-slate-800";
                 
                 return (
                     <div key={`col-hint-${i}`} className={classes}>
-                        <Hints line={col} type="col" />
+                        <Hints line={col} type="col" isComplete={isColCorrect} />
                     </div>
                 );
                 })}
@@ -349,6 +391,8 @@ const App: React.FC = () => {
                 {/* Rows */}
                 {rowHints.map((row, r) => {
                 const isThickBottom = (r + 1) % 5 === 0 && r !== puzzle.size - 1;
+                const isRowCorrect = isCheckHintsActive && isRowComplete(r);
+                
                 let hintClasses = "border-r border-slate-800 pr-1 flex items-center justify-end bg-slate-900/50";
                 
                 if (isThickBottom) hintClasses += " border-b-2 border-b-slate-400";
@@ -357,7 +401,7 @@ const App: React.FC = () => {
                 return (
                     <React.Fragment key={`row-${r}`}>
                         <div className={hintClasses}>
-                            <Hints line={row} type="row" />
+                            <Hints line={row} type="row" isComplete={isRowCorrect} />
                         </div>
                         
                         {playerGrid[r].map((cellState, c) => (
