@@ -18,7 +18,7 @@ interface GridCellProps {
 const GridCell: React.FC<GridCellProps> = ({ 
   state, 
   isRevealed, 
-  isDebug,
+  isDebug, 
   isSolutionFilled, 
   onMouseDown, 
   onMouseEnter,
@@ -51,9 +51,12 @@ const GridCell: React.FC<GridCellProps> = ({
   if (showSolution) {
     if (isSolutionFilled) {
        // Correctly filled cell (Solution)
+       
        if (isRevealed && !isDebug) {
-         // Game Won Animation: Custom rainbow pulse defined in index.html
-         classes += " animate-win-pulse";
+         // Game Won Animation: 
+         // Keep base color Indigo (Purple) so it matches the playing state 
+         // while waiting for the animation delay to finish.
+         classes += " bg-indigo-500 border-indigo-500 animate-win-pulse";
        } else {
          // Debug view or standard revealed state without animation requirements
          classes += " bg-emerald-500 border-emerald-600";
